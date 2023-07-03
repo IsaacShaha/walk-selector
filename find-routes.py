@@ -1,6 +1,7 @@
 import configparser
 import pickle
 import subprocess
+import sys
 from decimal import Decimal
 
 import folium
@@ -78,8 +79,9 @@ def get_non_backtracking_walk(
     max_distance,
     repeatable_edges=[],
     consumed_edges=[],
+    follow=False,
 ):
-    if len(path) > 0:
+    if follow and len(path) > 0:
         plot_map(graph, path)
     # Just Started
     if len(path) == 0:
@@ -107,6 +109,7 @@ def get_non_backtracking_walk(
             max_distance=max_distance,
             repeatable_edges=get_repeatable_edges(target),
             consumed_edges=[],
+            follow=follow,
         )
     else:
         current_node = path[-1]
@@ -145,6 +148,7 @@ def get_non_backtracking_walk(
                         )
                         else []
                     ),
+                    follow=follow,
                 )
                 for i in range(len(neighbors))
                 if not reference_in(
@@ -242,6 +246,8 @@ def save_map(graph, path):
 
 
 def main():
+    args = sys.argv
+    follow = "follow" in args
     result = get_api_result(HOME_NODE)
     ways = filter_ways(result.ways)
     graph = nx.Graph()
@@ -264,6 +270,7 @@ def main():
         path_distance=0,
         target=HOME_NODE,
         max_distance=MAX_DISTANCE,
+        follow=follow,
     )
     for walk in walks:
         save_map(graph, walk[0])

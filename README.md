@@ -45,6 +45,7 @@ MaxDistance = 1000
 
 # To-Do
 
+1. Repeatable edges aren't being repeated. Fix this!
 1. The walk selector currently finds all possible routes within the given maximum distance. Make it find only k routes. It's okay if they aren't the k shortest routes, as long as they are within the maximum distance.
 1. Allow adding a minimum distance for walks.
 1. List all exceptions to formally define a `walk` in this case in the [terminology](#terminology) section.
