@@ -6,7 +6,7 @@
 
 **walk** does not refer to a [walk](https://mathworld.wolfram.com/Walk.html) in the traditional graph theory sense -- it refers to using your 2 legs and unfaltering enthusiasm to get out into the world and smell some (hopefully) fresh air. A walk in this sense, using graph theory terminology, is a **closed walk**, but with many custom exceptions because our neighborhoods unfortunately weren't designed by [Euler](https://en.wikipedia.org/wiki/Leonhard_Euler#Graph_theory). Shame.
 
-# walk-selector
+# Motivation
 
 I like going for walks. I don't like when my walks are too long, or too short. I don't like planning routes, but old routes get... old. I hereby present _walk selector_!
 Is this necessary? Absolutely not. Is anything necessary?
@@ -27,6 +27,21 @@ python walk-selector.py
 ## Non-Nix
 
 Sorry ~~losers~~ non-nix users, I haven't gotten this far yet.
+
+# Usage
+
+To use `walk selector`, first create a `walk.ini` file that contains the following configurations under the default configuration header:
+
+- **HomeNode:** The node from which you will depart/return. You can find your node on [OpenStreetMap](https://www.openstreetmap.org/).
+- **MaxDistance:** The maximum distance you are willing to walk in meters.
+
+Here's an example `walk.ini`:
+
+```
+[DEFAULT]
+HomeNode = 9837865171
+MaxDistance = 1000
+```
 
 # To-Do
 
