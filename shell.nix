@@ -1,13 +1,5 @@
 let
   pkgs = import <nixpkgs> { };
-  python-packages = ps: with ps; [
-    folium
-    geopy
-    matplotlib
-    networkx
-    overpy
-    smopy
-  ];
   smopy = pkgs.python311Packages.buildPythonPackage rec {
     pname = "smopy";
     version = "latest";
@@ -24,6 +16,14 @@ let
       pillow
     ];
   };
+  python-packages = ps: with ps; [
+    folium
+    geopy
+    matplotlib
+    networkx
+    overpy
+    smopy
+  ];
 in
 pkgs.mkShell {
   buildInputs = [
