@@ -21,9 +21,7 @@ BANNED_WAY_TAGS = (
     ("leisure", "pitch"),
     ("service", "parking_aisle"),
 )
-REQUIRED_WAY_TAGS = (
-    ("highway",),
-)
+REQUIRED_WAY_TAGS = (("highway",),)
 
 # Start / end node of the walk.
 config = configparser.ConfigParser()
@@ -35,21 +33,6 @@ MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
 
 # Globals
 cache = {}
-
-
-def way_filter(way):
-    for tag in BANNED_WAY_TAGS:
-        if len(tag) == 1:
-            if way.tags.get(tag[0], None) is not None:
-                return False
-        elif len(tag) == 2:
-            if way.tags.get(tag[0], None) == tag[1]:
-                return False
-    for tag in REQUIRED_WAY_TAGS:
-        if len(tag) == 1:
-            if way.tags.get(tag[0], None) is None:
-                return False
-    return True
 
 
 def get_api_result(home_node):
@@ -142,7 +125,11 @@ def get_non_backtracking_walk(
                 if not reference_in(graph[current_node][neighbor], consumed_edges)
             ]
             if follow:
-                plot_map(graph=graph, path=path, legal_neighbors=legal_neighbors,)
+                plot_map(
+                    graph=graph,
+                    path=path,
+                    legal_neighbors=legal_neighbors,
+                )
             paths = [
                 get_non_backtracking_walk(
                     graph=graph,
@@ -302,12 +289,28 @@ def save_map(graph, path):
     m.save("map.html")
 
 
+def way_filter(way):
+    for tag in BANNED_WAY_TAGS:
+        if len(tag) == 1:
+            if way.tags.get(tag[0], None) is not None:
+                return False
+        elif len(tag) == 2:
+            if way.tags.get(tag[0], None) == tag[1]:
+                return False
+    for tag in REQUIRED_WAY_TAGS:
+        if len(tag) == 1:
+            if way.tags.get(tag[0], None) is None:
+                return False
+    return True
+
+
 def main():
     args = sys.argv
     follow = "follow" in args
     result = get_api_result(HOME_NODE)
     ways = filter(way_filter, result.ways)
     graph = nx.Graph()
+    # Populate the graph.
     for way in ways:
         for node_index in range(len(way.nodes)):
             node = way.nodes[node_index]
