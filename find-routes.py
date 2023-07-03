@@ -1,5 +1,4 @@
 import configparser
-import math
 import pickle
 import subprocess
 from decimal import Decimal
@@ -9,21 +8,26 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import overpy
 import smopy
-from geopy import distance
+from geopy import Point, distance
 
 # Constants
 
+# Ways with these tags will not be included for path finding.
 BANNED_WAY_TAGS = (
-    ("service", "parking_aisle"),
     ("highway", "service"),
+    ("leisure", "pitch"),
+    ("service", "parking_aisle"),
 )
 
+# Start / end node of the walk.
 config = configparser.ConfigParser()
 config.read("walk.ini")
 HOME_NODE = int(config["DEFAULT"]["HomeNode"])
 
 # Maximum distance of a walk in meters.
-MAX_DISTANCE = 1000
+MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
+
+# Globals
 
 
 def filter_ways(ways):
@@ -60,7 +64,7 @@ def get_api_result(home_node):
         return result
 
 
-def get_distance(node1, node2):
+def get_distance_between_nodes(node1, node2):
     return distance.distance(
         (node1["latitude"], node1["longitude"]), (node2["latitude"], node2["longitude"])
     ).meters
@@ -116,7 +120,9 @@ def get_non_backtracking_walk(
                 pass
             costs = [
                 graph[current_node][neighbor]["weight"]
-                + get_distance(graph.nodes[current_node], graph.nodes[neighbor])
+                + get_distance_between_nodes(
+                    graph.nodes[current_node], graph.nodes[neighbor]
+                )
                 for neighbor in neighbors
             ]
             neighbors_sorted = [
@@ -165,19 +171,54 @@ def get_path_length(graph, path):
     return sum([graph[path[i]][path[i + 1]]["weight"] for i in range(len(path) - 1)])
 
 
+def get_plot_background(center_point):
+    # Map for plotting route.
+    try:
+        with open("plot_background.pkl", "rb") as f:
+            plot_background = pickle.load(f)
+    except FileNotFoundError:
+        print("Retrieving image...")
+        corner_distance = MAX_DISTANCE / 2**0.5
+        top_left_point = distance.geodesic(meters=corner_distance).destination(
+            center_point, 315
+        )
+        bottom_right_point = distance.geodesic(meters=corner_distance).destination(
+            center_point, 135
+        )
+        plot_background = smopy.Map(
+            top_left_point[0],
+            top_left_point[1],
+            bottom_right_point[0],
+            bottom_right_point[1],
+            z=19,
+        )
+        with open("plot_background.pkl", "wb") as f:
+            pickle.dump(plot_background, f)
+        plot_background.save_png("plot_background.png")
+    return plot_background
+
+
 def plot_map(graph, path):
-    map = smopy.Map(min_latitude, min_longitude, max_latitude, max_longitude)
-    x, y = map.to_pixels(center_latitude, center_longitude)
-    ax = map.show_mpl(figsize=(8, 8))
-    ax.plot(x, y, "or", ms=10, mew=2)
-    plt.plot(
-        [graph.nodes[node]["longitude"] for node in path],
-        [graph.nodes[node]["latitude"] for node in path],
-        "ro-",
+    center_point = Point(
+        graph.nodes[HOME_NODE]["latitude"], graph.nodes[HOME_NODE]["longitude"]
     )
+    plot_background = get_plot_background(center_point)
+    pixels = [
+        plot_background.to_pixels(
+            float(graph.nodes[node]["latitude"]), float(graph.nodes[node]["longitude"])
+        )
+        for node in path
+    ]
+    x, y = zip(*pixels)
+    ax = plot_background.show_mpl()
+    ax.plot(x[:-1], y[:-1], "ro-", linewidth=1, markersize=1)
+    ax.plot(x[-2:], y[-2:], "g-", linewidth=1, markersize=1)
+    ax.plot(x[-1], y[-1], "go", linewidth=1, markersize=1)
+    width = max(x) - min(x)
+    height = max(y) - min(y)
+    margin = max((width, height)) * 0.1
+    plt.axis((min(x) - margin, max(x) + margin, max(y) + margin, min(y) - margin))
     plt.show()
-    input()
-    exit()
 
 
 def reference_in(object, iterable):
@@ -215,13 +256,13 @@ def main():
                 graph.add_edge(
                     node.id,
                     previous_node.id,
-                    weight=get_distance(graph_node, graph_previous_node),
+                    weight=get_distance_between_nodes(graph_node, graph_previous_node),
                 )
     walks = get_non_backtracking_walk(
         graph=graph,
         path=[],
         path_distance=0,
-        target=home_node,
+        target=HOME_NODE,
         max_distance=MAX_DISTANCE,
     )
     for walk in walks:
