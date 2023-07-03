@@ -29,6 +29,7 @@ HOME_NODE = int(config["DEFAULT"]["HomeNode"])
 MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
 
 # Globals
+cache = {}
 
 
 def filter_ways(ways):
@@ -81,8 +82,6 @@ def get_non_backtracking_walk(
     consumed_edges=[],
     follow=False,
 ):
-    if follow and len(path) > 0:
-        plot_map(graph, path)
     # Just Started
     if len(path) == 0:
 
@@ -131,29 +130,33 @@ def get_non_backtracking_walk(
             neighbors_sorted = [
                 neighbor for _, neighbor in sorted(zip(costs, neighbors))
             ]
+            legal_neighbors = [
+                neighbor
+                for neighbor in neighbors_sorted
+                if not reference_in(graph[current_node][neighbor], consumed_edges)
+            ]
+            if follow:
+                plot_map(graph=graph, path=path, legal_neighbors=legal_neighbors,)
             paths = [
                 get_non_backtracking_walk(
                     graph=graph,
-                    path=path + [neighbors_sorted[i]],
+                    path=path + [legal_neighbors[i]],
                     path_distance=path_distance
-                    + graph[current_node][neighbors_sorted[i]]["weight"],
+                    + graph[current_node][legal_neighbors[i]]["weight"],
                     target=target,
                     max_distance=max_distance,
                     repeatable_edges=repeatable_edges,
                     consumed_edges=consumed_edges
                     + (
-                        [graph[current_node][neighbors_sorted[i]]]
+                        [graph[current_node][legal_neighbors[i]]]
                         if not reference_in(
-                            graph[current_node][neighbors_sorted[i]], repeatable_edges
+                            graph[current_node][legal_neighbors[i]], repeatable_edges
                         )
                         else []
                     ),
                     follow=follow,
                 )
-                for i in range(len(neighbors))
-                if not reference_in(
-                    graph[current_node][neighbors_sorted[i]], consumed_edges
-                )
+                for i in range(len(legal_neighbors))
             ]
             paths = sum(paths, [])
             paths = list(filter(lambda path: path[0][-1] == target, paths))
@@ -202,27 +205,73 @@ def get_plot_background(center_point):
     return plot_background
 
 
-def plot_map(graph, path):
+def plot_map(graph, path, legal_neighbors=[]):
+    global cache
     center_point = Point(
         graph.nodes[HOME_NODE]["latitude"], graph.nodes[HOME_NODE]["longitude"]
     )
     plot_background = get_plot_background(center_point)
-    pixels = [
+    path_pixels = [
         plot_background.to_pixels(
             float(graph.nodes[node]["latitude"]), float(graph.nodes[node]["longitude"])
         )
         for node in path
     ]
-    x, y = zip(*pixels)
-    ax = plot_background.show_mpl()
-    ax.plot(x[:-1], y[:-1], "ro-", linewidth=1, markersize=1)
-    ax.plot(x[-2:], y[-2:], "g-", linewidth=1, markersize=1)
-    ax.plot(x[-1], y[-1], "go", linewidth=1, markersize=1)
-    width = max(x) - min(x)
-    height = max(y) - min(y)
-    margin = max((width, height)) * 0.1
-    plt.axis((min(x) - margin, max(x) + margin, max(y) + margin, min(y) - margin))
-    plt.show()
+    path_x, path_y = zip(*path_pixels)
+    if cache.get("first_plot", True):
+        ax = plot_background.show_mpl()
+        cache["first_plot"] = False
+    else:
+        ax = plt.gca()
+        ax.imshow(plot_background.img)
+    ax.plot(path_x[:-1], path_y[:-1], "ro-", linewidth=2, markersize=1)
+    ax.plot(path_x[-2:], path_y[-2:], "b-", linewidth=1, markersize=1)
+    ax.plot(path_x[-1], path_y[-1], "bo", linewidth=1, markersize=3)
+
+    for neighbor in legal_neighbors:
+        neighbor_pixel = plot_background.to_pixels(
+            float(graph.nodes[neighbor]["latitude"]),
+            float(graph.nodes[neighbor]["longitude"]),
+        )
+        ax.plot(
+            (path_x[-1], neighbor_pixel[0]),
+            (path_y[-1], neighbor_pixel[1]),
+            "go-",
+            linewidth=1,
+            markersize=2,
+        )
+    neighbor_pixels = [
+        plot_background.to_pixels(
+            float(graph.nodes[neighbor]["latitude"]),
+            float(graph.nodes[neighbor]["longitude"]),
+        )
+        for neighbor in legal_neighbors
+    ]
+    try:
+        neighbor_x, neighbor_y = zip(*neighbor_pixels)
+    except ValueError:
+        neighbor_x = tuple()
+        neighbor_y = tuple()
+    all_x = path_x + neighbor_x
+    all_y = path_y + neighbor_y
+    min_x = min(all_x)
+    max_x = max(all_x)
+    min_y = min(all_y)
+    max_y = max(all_y)
+    data_width = max_x - min_x
+    data_height = max_y - min_y
+    plot_margin = max(1, max((data_width, data_height)) * 0.1)
+    plt.axis(
+        (
+            min_x - plot_margin,
+            max_x + plot_margin,
+            max_y + plot_margin,
+            min_y - plot_margin,
+        )
+    )
+    plt.draw()
+    plt.pause(0.1)
+    plt.cla()
 
 
 def reference_in(object, iterable):
@@ -264,6 +313,8 @@ def main():
                     previous_node.id,
                     weight=get_distance_between_nodes(graph_node, graph_previous_node),
                 )
+    if follow:
+        plt.show(block=False)
     walks = get_non_backtracking_walk(
         graph=graph,
         path=[],
