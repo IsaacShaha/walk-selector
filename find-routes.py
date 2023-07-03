@@ -35,6 +35,24 @@ MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
 cache = {}
 
 
+def build_graph(ways):
+    graph = nx.Graph()
+    for way in ways:
+        for node_index in range(len(way.nodes)):
+            node = way.nodes[node_index]
+            graph.add_node(node.id, latitude=node.lat, longitude=node.lon)
+            if node_index > 0:
+                previous_node = way.nodes[node_index - 1]
+                graph_node = graph.nodes[node.id]
+                graph_previous_node = graph.nodes[previous_node.id]
+                graph.add_edge(
+                    node.id,
+                    previous_node.id,
+                    weight=get_distance_between_nodes(graph_node, graph_previous_node),
+                )
+    return graph
+
+
 def get_api_result(home_node):
     try:
         with open("result.pkl", "rb") as f:
@@ -119,6 +137,7 @@ def get_non_backtracking_walk(
             neighbors_sorted = [
                 neighbor for _, neighbor in sorted(zip(costs, neighbors))
             ]
+            costs_sorted = sorted(costs)
             legal_neighbors = [
                 neighbor
                 for neighbor in neighbors_sorted
@@ -177,7 +196,6 @@ def get_plot_background(center_point):
         with open("plot_background.pkl", "rb") as f:
             plot_background = pickle.load(f)
     except FileNotFoundError:
-        print("Retrieving image...")
         corner_distance = MAX_DISTANCE / 2**0.5
         top_left_point = distance.geodesic(meters=corner_distance).destination(
             center_point, 315
@@ -197,11 +215,11 @@ def get_plot_background(center_point):
     return plot_background
 
 
-def plot_map(graph, path, legal_neighbors=[]):
+def plot_map(graph, path, legal_neighbors=[], manual_pause=False):
     global cache
-    cache["iteration"] = cache.get("iteration", -1) + 1
-    if cache["iteration"] % 10 != 0:
-        return
+    # cache["iteration"] = cache.get("iteration", -1) + 1
+    # if cache["iteration"] % 10 != 0:
+    #     return
     center_point = Point(
         graph.nodes[HOME_NODE]["latitude"], graph.nodes[HOME_NODE]["longitude"]
     )
@@ -265,8 +283,61 @@ def plot_map(graph, path, legal_neighbors=[]):
         )
     )
     plt.draw()
-    plt.pause(0.01)
+    if manual_pause:
+        input("Press enter to continue...")
+    else:
+        plt.pause(0.01)
     plt.cla()
+
+
+def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
+    if start_node_index == None:
+        reduce_segment(
+            graph=graph,
+            nodes=nodes,
+            start_node_index=0,
+            end_node_index=1,
+        )
+    elif (
+        end_node_index < len(nodes) - 1
+        and len(tuple(graph.neighbors(nodes[end_node_index].id))) == 2
+        and nodes[end_node_index].id != HOME_NODE
+    ):
+        reduce_segment(
+            graph=graph,
+            nodes=nodes,
+            start_node_index=start_node_index,
+            end_node_index=end_node_index + 1,
+        )
+    elif (
+        end_node_index == len(nodes) - 1
+        or len(tuple(graph.neighbors(nodes[end_node_index].id))) != 2
+        or nodes[end_node_index].id == HOME_NODE
+    ):
+        distance = sum(
+            graph[nodes[i].id][nodes[i + 1].id]["weight"]
+            for i in range(start_node_index, end_node_index)
+        )
+        for node in nodes[start_node_index + 1 : end_node_index]:
+            graph.remove_node(node.id)
+        graph.add_edge(
+            nodes[start_node_index].id, nodes[end_node_index].id, weight=distance
+        )
+        if end_node_index < len(nodes) - 1:
+            reduce_segment(
+                graph=graph,
+                nodes=nodes,
+                start_node_index=end_node_index,
+                end_node_index=end_node_index + 1,
+            )
+        else:
+            return
+
+
+def reduce_segments(graph, ways):
+    for way in ways:
+        reduce_segment(graph, way.nodes)
+    return graph
 
 
 def reference_in(object, iterable):
@@ -306,24 +377,13 @@ def way_filter(way):
 
 def main():
     args = sys.argv
-    follow = "follow" in args
+    follow = "--follow" in args or "-f" in args
+    gallery = "--gallery" in args or "-g" in args
     result = get_api_result(HOME_NODE)
-    ways = filter(way_filter, result.ways)
-    graph = nx.Graph()
-    # Populate the graph.
-    for way in ways:
-        for node_index in range(len(way.nodes)):
-            node = way.nodes[node_index]
-            graph.add_node(node.id, latitude=node.lat, longitude=node.lon)
-            if node_index > 0:
-                previous_node = way.nodes[node_index - 1]
-                graph_node = graph.nodes[node.id]
-                graph_previous_node = graph.nodes[previous_node.id]
-                graph.add_edge(
-                    node.id,
-                    previous_node.id,
-                    weight=get_distance_between_nodes(graph_node, graph_previous_node),
-                )
+    ways = tuple(filter(way_filter, result.ways))
+    graph = build_graph(ways)
+    reduce_segments(graph, ways)
+    removed_nodes = [node for node in graph.nodes if graph.nodes[node] == {}]
     if follow:
         plt.show(block=False)
     walks = get_non_backtracking_walk(
@@ -334,6 +394,9 @@ def main():
         max_distance=MAX_DISTANCE,
         follow=follow,
     )
+    if gallery:
+        for walk in walks:
+            plot_map(graph, walk[0], manual_pause=True)
     for walk in walks:
         save_map(graph, walk[0])
         print(get_overpass_visualisation_query(walk[0]))
