@@ -207,7 +207,6 @@ def get_plot_background(center_point):
         )
         with open("plot_background.pkl", "wb") as f:
             pickle.dump(plot_background, f)
-        plot_background.save_png("plot_background.png")
     return plot_background
 
 
