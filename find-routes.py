@@ -1,13 +1,14 @@
 import configparser
-from decimal import Decimal
-from geopy import distance
-import folium
 import math
+import pickle
+import subprocess
+from decimal import Decimal
+
+import folium
 import matplotlib.pyplot as plt
 import networkx as nx
 import overpy
-import pickle
-import subprocess
+from geopy import distance
 
 BANNED_WAY_TAGS = (
     ("service", "parking_aisle"),

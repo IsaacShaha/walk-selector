@@ -1,3 +1,4 @@
 *.html
 *.ini
+.direnv/*
 .envrc
