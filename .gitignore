@@ -1,5 +1,6 @@
 *.html
 *.ini
 *.pkl
+*.png
 .direnv/*
 .envrc
