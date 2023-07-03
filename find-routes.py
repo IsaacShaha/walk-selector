@@ -8,12 +8,22 @@ import folium
 import matplotlib.pyplot as plt
 import networkx as nx
 import overpy
+import smopy
 from geopy import distance
+
+# Constants
 
 BANNED_WAY_TAGS = (
     ("service", "parking_aisle"),
     ("highway", "service"),
 )
+
+config = configparser.ConfigParser()
+config.read("walk.ini")
+HOME_NODE = int(config["DEFAULT"]["HomeNode"])
+
+# Maximum distance of a walk in meters.
+MAX_DISTANCE = 1000
 
 
 def filter_ways(ways):
@@ -61,12 +71,12 @@ def get_non_backtracking_walk(
     path,
     path_distance,
     target,
-    max_length,
+    max_distance,
     repeatable_edges=[],
     consumed_edges=[],
 ):
-    # if len(path) > 0:
-    #     plot_map(graph, path)
+    if len(path) > 0:
+        plot_map(graph, path)
     # Just Started
     if len(path) == 0:
 
@@ -90,14 +100,14 @@ def get_non_backtracking_walk(
             path=[target],
             path_distance=0,
             target=target,
-            max_length=max_length,
+            max_distance=max_distance,
             repeatable_edges=get_repeatable_edges(target),
             consumed_edges=[],
         )
     else:
         current_node = path[-1]
         # Continuing Path
-        if len(path) == 1 or current_node != target and path_distance < max_length:
+        if len(path) == 1 or current_node != target and path_distance < max_distance:
             neighbors = list(graph.neighbors(current_node))
             try:
                 backtrack_node = path[-2]
@@ -119,7 +129,7 @@ def get_non_backtracking_walk(
                     path_distance=path_distance
                     + graph[current_node][neighbors_sorted[i]]["weight"],
                     target=target,
-                    max_length=max_length,
+                    max_distance=max_distance,
                     repeatable_edges=repeatable_edges,
                     consumed_edges=consumed_edges
                     + (
@@ -156,12 +166,18 @@ def get_path_length(graph, path):
 
 
 def plot_map(graph, path):
+    map = smopy.Map(min_latitude, min_longitude, max_latitude, max_longitude)
+    x, y = map.to_pixels(center_latitude, center_longitude)
+    ax = map.show_mpl(figsize=(8, 8))
+    ax.plot(x, y, "or", ms=10, mew=2)
     plt.plot(
         [graph.nodes[node]["longitude"] for node in path],
         [graph.nodes[node]["latitude"] for node in path],
         "ro-",
     )
     plt.show()
+    input()
+    exit()
 
 
 def reference_in(object, iterable):
@@ -185,10 +201,7 @@ def save_map(graph, path):
 
 
 def main():
-    config = configparser.ConfigParser()
-    config.read("walk.ini")
-    home_node = int(config["DEFAULT"]["HomeNode"])
-    result = get_api_result(home_node)
+    result = get_api_result(HOME_NODE)
     ways = filter_ways(result.ways)
     graph = nx.Graph()
     for way in ways:
@@ -209,7 +222,7 @@ def main():
         path=[],
         path_distance=0,
         target=home_node,
-        max_length=1000,
+        max_distance=MAX_DISTANCE,
     )
     for walk in walks:
         save_map(graph, walk[0])
