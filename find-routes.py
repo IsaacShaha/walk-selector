@@ -15,9 +15,14 @@ from geopy import Point, distance
 
 # Ways with these tags will not be included for path finding.
 BANNED_WAY_TAGS = (
+    ("building",),
     ("highway", "service"),
+    ("landuse", "grass"),
     ("leisure", "pitch"),
     ("service", "parking_aisle"),
+)
+REQUIRED_WAY_TAGS = (
+    ("highway",),
 )
 
 # Start / end node of the walk.
@@ -32,18 +37,19 @@ MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
 cache = {}
 
 
-def filter_ways(ways):
-    return [
-        way
-        for way in ways
-        if not any(
-            [
-                (tag, way.tags[tag]) in BANNED_WAY_TAGS
-                for tag in way.tags
-                if way.tags[tag] is not None
-            ]
-        )
-    ]
+def way_filter(way):
+    for tag in BANNED_WAY_TAGS:
+        if len(tag) == 1:
+            if way.tags.get(tag[0], None) is not None:
+                return False
+        elif len(tag) == 2:
+            if way.tags.get(tag[0], None) == tag[1]:
+                return False
+    for tag in REQUIRED_WAY_TAGS:
+        if len(tag) == 1:
+            if way.tags.get(tag[0], None) is None:
+                return False
+    return True
 
 
 def get_api_result(home_node):
@@ -207,6 +213,9 @@ def get_plot_background(center_point):
 
 def plot_map(graph, path, legal_neighbors=[]):
     global cache
+    cache["iteration"] = cache.get("iteration", -1) + 1
+    if cache["iteration"] % 10 != 0:
+        return
     center_point = Point(
         graph.nodes[HOME_NODE]["latitude"], graph.nodes[HOME_NODE]["longitude"]
     )
@@ -270,7 +279,7 @@ def plot_map(graph, path, legal_neighbors=[]):
         )
     )
     plt.draw()
-    plt.pause(0.1)
+    plt.pause(0.01)
     plt.cla()
 
 
@@ -298,7 +307,7 @@ def main():
     args = sys.argv
     follow = "follow" in args
     result = get_api_result(HOME_NODE)
-    ways = filter_ways(result.ways)
+    ways = filter(way_filter, result.ways)
     graph = nx.Graph()
     for way in ways:
         for node_index in range(len(way.nodes)):
