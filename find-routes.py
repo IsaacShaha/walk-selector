@@ -5,8 +5,10 @@ import sys
 from decimal import Decimal
 
 import folium
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import overpy
 import smopy
 from geopy import Point, distance
@@ -33,6 +35,7 @@ MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
 
 # Globals
 cache = {}
+mpl.rcParams["lines.markersize"] = 10
 
 
 def build_graph(ways):
@@ -120,7 +123,17 @@ def get_non_backtracking_walk(
     else:
         current_node = path[-1]
         # Continuing Path
-        if len(path) == 1 or current_node != target and path_distance < max_distance:
+        if (
+            len(path) == 1
+            or current_node != target
+            and (
+                path_distance
+                + get_distance_between_nodes(
+                    graph.nodes[current_node], graph.nodes[target]
+                )
+                < max_distance
+            )
+        ):
             neighbors = list(graph.neighbors(current_node))
             try:
                 backtrack_node = path[-2]
@@ -237,9 +250,15 @@ def plot_map(graph, path, legal_neighbors=[], manual_pause=False):
     else:
         ax = plt.gca()
         ax.imshow(plot_background.img)
-    ax.plot(path_x[:-1], path_y[:-1], "ro-", linewidth=2, markersize=1)
-    ax.plot(path_x[-2:], path_y[-2:], "b-", linewidth=1, markersize=1)
-    ax.plot(path_x[-1], path_y[-1], "bo", linewidth=1, markersize=3)
+    angles = [
+        np.arctan2(path_y[i + 1] - path_y[i], path_x[i + 1] - path_x[i])
+        for i in range(len(path_x) - 1)
+    ]
+    ax.plot(path_x[:-1], path_y[:-1], "r-", linewidth=2)
+    ax.plot(path_x[-2:], path_y[-2:], "b-", linewidth=2)
+    ax.plot(path_x[-1], path_y[-1], "g-", linewidth=2)
+    for i in range(len(path_x)):
+        ax.text(path_x[i] - len(path_x) * 2 / 3 + i, path_y[i], str(i), fontsize=20)
 
     for neighbor in legal_neighbors:
         neighbor_pixel = plot_background.to_pixels(
@@ -283,10 +302,9 @@ def plot_map(graph, path, legal_neighbors=[], manual_pause=False):
         )
     )
     plt.draw()
+    plt.pause(0.01)
     if manual_pause:
         input("Press enter to continue...")
-    else:
-        plt.pause(0.01)
     plt.cla()
 
 
