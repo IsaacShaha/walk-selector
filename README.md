@@ -30,8 +30,7 @@ Sorry ~~losers~~ non-nix users, I haven't gotten this far yet.
 
 # To-Do
 
-1. The walk selector no longer backtracks through paths it has **just** took, but it still backtracks through paths it took before. I need to mark these paths as no longer traceable, with certain exceptions. For example, there are a few nodes near the target that should be revisitable so that a longer path to return to the target from the other side is not necessary.
-1. The walk selector currently only finds 1 route. It needs to find k routes. These are not guaranteed to be the k shortest routes and I am okay with that.
-1. Allow filtering walks to a certain range.
+1. The walk selector currently finds all possible routes within the given maximum distance. Make it find only k routes. It's okay if they aren't the k shortest routes, as long as they are within the maximum distance.
+1. Allow adding a minimum distance for walks.
 1. List all exceptions to formally define a `walk` in this case in the [terminology](#terminology) section.
 1. Remake this whole thing in Haskell (because I <3 functional programming).
