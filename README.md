@@ -45,14 +45,6 @@ MaxDistance = 1000
 
 # To-Do
 
-1. Combine sequences of nodes n_1, n_2, ..., n\_(k-1), n_k with distances d\_(1,2), d\_(2,3), ..., d\_(k-2,k-1), d\_(k-1,k) where:
-
-   - n_0 does not have exactly 2 neighbors.
-   - n_k does not have exactly 2 neighbors.
-   - nodes n_2, n_3, ..., n\_(k-2), n\_(k-1) each have exactly 2 neighbors
-
-   with only nodes n_1, n_k with distance d\_(1,2) + d\_(2,3) + ... + d\_(k-2,k-1) + d\_(k-1,k)
-
 1. The walk selector currently finds all possible routes within the given maximum distance. Make it find only k routes. It's okay if they aren't the k shortest routes, as long as they are within the maximum distance.
 1. Allow adding a minimum distance for walks.
 1. List all exceptions to formally define a `walk` in this case in the [terminology](#terminology) section.
