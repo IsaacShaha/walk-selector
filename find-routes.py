@@ -33,9 +33,11 @@ HOME_NODE = int(config["DEFAULT"]["HomeNode"])
 # Maximum distance of a walk in meters.
 MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
 
+# Number of walks to find.
+NUM_WALKS = int(config["DEFAULT"]["NumWalks"])
+
 # Globals
 cache = {}
-mpl.rcParams["lines.markersize"] = 10
 
 
 def build_graph(ways):
@@ -228,11 +230,15 @@ def get_plot_background(center_point):
     return plot_background
 
 
-def plot_map(graph, path, legal_neighbors=[], manual_pause=False):
+def plot_map(
+    graph,
+    path,
+    legal_neighbors=[],
+    manual_pause=False,
+    disconnected=False,
+    marker_size=10,
+):
     global cache
-    # cache["iteration"] = cache.get("iteration", -1) + 1
-    # if cache["iteration"] % 10 != 0:
-    #     return
     center_point = Point(
         graph.nodes[HOME_NODE]["latitude"], graph.nodes[HOME_NODE]["longitude"]
     )
@@ -254,11 +260,14 @@ def plot_map(graph, path, legal_neighbors=[], manual_pause=False):
         np.arctan2(path_y[i + 1] - path_y[i], path_x[i + 1] - path_x[i])
         for i in range(len(path_x) - 1)
     ]
-    ax.plot(path_x[:-1], path_y[:-1], "r-", linewidth=2)
-    ax.plot(path_x[-2:], path_y[-2:], "b-", linewidth=2)
-    ax.plot(path_x[-1], path_y[-1], "g-", linewidth=2)
-    for i in range(len(path_x)):
-        ax.text(path_x[i] - len(path_x) * 2 / 3 + i, path_y[i], str(i), fontsize=20)
+    if disconnected:
+        ax.plot(path_x, path_y, "ro", markersize=marker_size)
+    else:
+        ax.plot(path_x[:-1], path_y[:-1], "r-", linewidth=2)
+        ax.plot(path_x[-2:], path_y[-2:], "b-", linewidth=2)
+        ax.plot(path_x[-1], path_y[-1], "g-", linewidth=2)
+        for i in range(len(path_x)):
+            ax.text(path_x[i] - len(path_x) * 2 / 3 + i, path_y[i], str(i), fontsize=20)
 
     for neighbor in legal_neighbors:
         neighbor_pixel = plot_background.to_pixels(
@@ -310,6 +319,14 @@ def plot_map(graph, path, legal_neighbors=[], manual_pause=False):
 
 def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
     if start_node_index == None:
+        # Way is a cycle.
+        if nodes[0] == nodes[-1]:
+            nodes.pop()
+            # Find an external entrypoint to the cycle, and re-order the cycle so that it is the first node.
+            for i in range(len(nodes)):
+                if len(tuple(graph.neighbors(nodes[i].id))) > 2:
+                    nodes = nodes[i:] + nodes[: i + 1]
+                    break
         reduce_segment(
             graph=graph,
             nodes=nodes,
@@ -397,11 +414,11 @@ def main():
     args = sys.argv
     follow = "--follow" in args or "-f" in args
     gallery = "--gallery" in args or "-g" in args
+    overpass = "--overpass" in args or "-o" in args
     result = get_api_result(HOME_NODE)
     ways = tuple(filter(way_filter, result.ways))
     graph = build_graph(ways)
     reduce_segments(graph, ways)
-    removed_nodes = [node for node in graph.nodes if graph.nodes[node] == {}]
     if follow:
         plt.show(block=False)
     walks = get_non_backtracking_walk(
@@ -412,12 +429,15 @@ def main():
         max_distance=MAX_DISTANCE,
         follow=follow,
     )
+    walks = sorted(walks, key=lambda walk: walk[1], reverse=True)
+    print(f"Found {len(walks)} walks.")
     if gallery:
         for walk in walks:
             plot_map(graph, walk[0], manual_pause=True)
-    for walk in walks:
-        save_map(graph, walk[0])
-        print(get_overpass_visualisation_query(walk[0]))
+    if overpass:
+        for walk in walks:
+            save_map(graph, walk[0])
+            print(get_overpass_visualisation_query(walk[0]))
 
 
 if __name__ == "__main__":
