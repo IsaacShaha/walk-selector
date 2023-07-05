@@ -103,14 +103,15 @@ def get_distance_between_nodes(node1, node2):
 
 def get_non_backtracking_walk(
     graph,
-    path,
-    path_distance,
-    target,
     max_distance,
-    repeatable_edges=[],
+    path,
+    target,
     consumed_edges=[],
-    follow=False,
     direction=None,
+    follow=False,
+    path_angle=0,
+    path_distance=0,
+    repeatable_edges=[],
 ):
     # Just Started
     if len(path) == 0:
@@ -132,14 +133,14 @@ def get_non_backtracking_walk(
 
         return get_non_backtracking_walk(
             graph=graph,
-            path=[target],
-            path_distance=0,
-            target=target,
             max_distance=max_distance,
-            repeatable_edges=get_repeatable_edges(target),
-            consumed_edges=[],
-            follow=follow,
+            path=[target],
+            target=target,
+            consumed_edges=consumed_edges,
             direction=direction,
+            follow=follow,
+            path_distance=path_angle,
+            repeatable_edges=repeatable_edges + get_repeatable_edges(target),
         )
     else:
         current_node = path[-1]
@@ -186,12 +187,9 @@ def get_non_backtracking_walk(
             paths = [
                 get_non_backtracking_walk(
                     graph=graph,
-                    path=path + [legal_neighbors[i]],
-                    path_distance=path_distance
-                    + graph[current_node][legal_neighbors[i]]["weight"],
-                    target=target,
                     max_distance=max_distance,
-                    repeatable_edges=repeatable_edges,
+                    path=path + [legal_neighbors[i]],
+                    target=target,
                     consumed_edges=consumed_edges
                     + (
                         [graph[current_node][legal_neighbors[i]]]
@@ -200,10 +198,15 @@ def get_non_backtracking_walk(
                         )
                         else []
                     ),
-                    follow=follow,
                     direction=get_direction(
                         graph.nodes[current_node], graph.nodes[legal_neighbors[i]]
                     ),
+                    follow=follow,
+                    path_distance=(
+                        path_distance
+                        + graph[current_node][legal_neighbors[i]]["weight"]
+                    ),
+                    repeatable_edges=repeatable_edges,
                 )
                 for i in range(len(legal_neighbors))
             ]
@@ -445,10 +448,9 @@ def main():
         plt.show(block=False)
     walks = get_non_backtracking_walk(
         graph=graph,
-        path=[],
-        path_distance=0,
-        target=HOME_NODE,
         max_distance=MAX_DISTANCE,
+        path=[],
+        target=HOME_NODE,
         follow=follow,
     )
     walks = sorted(walks, key=lambda walk: walk[1], reverse=True)
