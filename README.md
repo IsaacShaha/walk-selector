@@ -21,12 +21,15 @@ With walk selector, you can find k routes from your home to... your home! (Feel 
 git clone git@github.com:IsaacShaha/walk-selector.git
 cd walk-selector
 nix-shell
-python walk-selector.py
 ```
 
 ## Non-Nix
 
-Sorry ~~losers~~ non-nix users, I haven't gotten this far yet.
+```
+git clone git@github.com:IsaacShaha/walk-selector.git
+cd walk-selector
+pip install -r requirements.txt
+```
 
 # Usage
 
@@ -44,6 +47,18 @@ HomeNode = 25840120
 MaxDistance = 1000
 NumWalks =
 ```
+
+Then, run `python walk-selector.py` with any of the following options:
+
+    follow = "--follow" in args or "-f" in args
+    gallery = "--gallery" in args or "-g" in args
+    overpass = "--overpass" in args or "-o" in args
+    save = "--save" in args or "-s" in args
+
+- `-f`, `--follow`: Follow the walk as it plots. Mostly useful for debugging -- you will never finish your plotting this way unless your graph is extremely small.
+- `-g`, `--gallery`: View each walk in `matplotlib`.
+- `-o`, `--overpass`: Generate overpass queries for each map. You can run these queries at `https://overpass-turbo.eu/`. For nerds only.
+- `-s`, `--save`: Save maps for each walk in the `maps` directory. You can open these interactive maps on your browser.
 
 # To-Do
 
