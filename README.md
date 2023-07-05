@@ -47,6 +47,8 @@ NumWalks =
 
 # To-Do
 
+1. Take the back side off folium arrows.
+1. Add reduced nodes to path visualisations in both folium and smopy maps.
 1. Allow adding a minimum distance for walks.
 1. List all exceptions to formally define a `walk` in this case in the [terminology](#terminology) section.
 1. Remake this whole thing in Haskell (because I <3 functional programming).
