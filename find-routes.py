@@ -58,6 +58,15 @@ def build_graph(ways):
     return graph
 
 
+def get_angle(direction1, direction2):
+    angle = direction2 - direction1
+    if angle > np.pi:
+        angle -= 2 * np.pi
+    elif angle < -np.pi:
+        angle += 2 * np.pi
+    return angle
+
+
 def get_api_result(home_node):
     try:
         with open("result.pkl", "rb") as f:
@@ -78,6 +87,14 @@ def get_api_result(home_node):
         return result
 
 
+def get_direction(node1, node2):
+    lat1 = float(node1["latitude"])
+    lon1 = float(node1["longitude"])
+    lat2 = float(node2["latitude"])
+    lon2 = float(node2["longitude"])
+    return np.arctan2(lat2 - lat1, lon2 - lon1)
+
+
 def get_distance_between_nodes(node1, node2):
     return distance.distance(
         (node1["latitude"], node1["longitude"]), (node2["latitude"], node2["longitude"])
@@ -93,6 +110,7 @@ def get_non_backtracking_walk(
     repeatable_edges=[],
     consumed_edges=[],
     follow=False,
+    direction=None,
 ):
     # Just Started
     if len(path) == 0:
@@ -121,6 +139,7 @@ def get_non_backtracking_walk(
             repeatable_edges=get_repeatable_edges(target),
             consumed_edges=[],
             follow=follow,
+            direction=direction,
         )
     else:
         current_node = path[-1]
@@ -182,6 +201,9 @@ def get_non_backtracking_walk(
                         else []
                     ),
                     follow=follow,
+                    direction=get_direction(
+                        graph.nodes[current_node], graph.nodes[legal_neighbors[i]]
+                    ),
                 )
                 for i in range(len(legal_neighbors))
             ]
