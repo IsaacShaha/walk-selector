@@ -33,19 +33,20 @@ Sorry ~~losers~~ non-nix users, I haven't gotten this far yet.
 To use `walk selector`, first create a `walk.ini` file that contains the following configurations under the default configuration header:
 
 - **HomeNode:** The node from which you will depart/return. You can find your node on [OpenStreetMap](https://www.openstreetmap.org/).
-- **MaxDistance:** The maximum distance you are willing to walk in meters.
+- **MaxDistance:** The maximum distance you are willing to walk in meters. Significantly affects performance.
+- **NumWalks:** The number of walks you would like to generate. Has no effect on performance.
 
 Here's an example `walk.ini`:
 
 ```
 [DEFAULT]
-HomeNode = 9837865171
+HomeNode = 25840120
 MaxDistance = 1000
+NumWalks =
 ```
 
 # To-Do
 
-1. The walk selector currently finds all possible routes within the given maximum distance. Make it find only k routes. It's okay if they aren't the k shortest routes, as long as they are within the maximum distance.
 1. Allow adding a minimum distance for walks.
 1. List all exceptions to formally define a `walk` in this case in the [terminology](#terminology) section.
 1. Remake this whole thing in Haskell (because I <3 functional programming).
