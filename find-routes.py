@@ -139,6 +139,7 @@ def get_non_backtracking_walk(
             consumed_edges=consumed_edges,
             direction=direction,
             follow=follow,
+            path_angle=path_angle,
             path_distance=path_angle,
             repeatable_edges=repeatable_edges + get_repeatable_edges(target),
         )
@@ -183,6 +184,7 @@ def get_non_backtracking_walk(
                     graph=graph,
                     path=path,
                     legal_neighbors=legal_neighbors,
+                    manual_pause=True,
                 )
             paths = [
                 get_non_backtracking_walk(
@@ -202,6 +204,20 @@ def get_non_backtracking_walk(
                         graph.nodes[current_node], graph.nodes[legal_neighbors[i]]
                     ),
                     follow=follow,
+                    path_angle=(
+                        path_angle
+                        + abs(
+                            get_angle(
+                                direction,
+                                get_direction(
+                                    graph.nodes[current_node],
+                                    graph.nodes[legal_neighbors[i]],
+                                ),
+                            )
+                        )
+                        if direction is not None
+                        else path_angle
+                    ),
                     path_distance=(
                         path_distance
                         + graph[current_node][legal_neighbors[i]]["weight"]
@@ -216,7 +232,7 @@ def get_non_backtracking_walk(
 
         # Finished
         else:
-            return [[path, path_distance]]
+            return [[path, path_angle / path_distance]]
 
 
 def get_overpass_visualisation_query(path):
@@ -453,10 +469,13 @@ def main():
         target=HOME_NODE,
         follow=follow,
     )
-    walks = sorted(walks, key=lambda walk: walk[1], reverse=True)
+    # Take the walks with the NUM_WALKS-lowest path angle/distance.
+    walks = sorted(walks, key=lambda walk: walk[1])[:NUM_WALKS]
     print(f"Found {len(walks)} walks.")
     if gallery:
-        for walk in walks:
+        for i in range(len(walks)):
+            walk = walks[i]
+            print(f"Walk {i+1}. Angle/Distance: {walk[1]}")
             plot_map(graph, walk[0], manual_pause=True)
     if overpass:
         for walk in walks:
