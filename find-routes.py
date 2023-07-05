@@ -423,7 +423,7 @@ def reference_in(object, iterable):
     return False
 
 
-def save_map(graph, path):
+def save_map(graph, path, map_number=None):
     locations = [
         (graph.nodes[node]["latitude"], graph.nodes[node]["longitude"]) for node in path
     ]
@@ -433,7 +433,8 @@ def save_map(graph, path):
     )
     folium.Marker(location=locations[0], popup="Home").add_to(m)
     folium.PolyLine(locations=locations).add_to(m)
-    m.save("map.html")
+    map_number_representation = f"-{map_number}" if map_number is not None else ""
+    m.save(f"maps/map{map_number_representation}.html")
 
 
 def way_filter(way):
@@ -456,6 +457,7 @@ def main():
     follow = "--follow" in args or "-f" in args
     gallery = "--gallery" in args or "-g" in args
     overpass = "--overpass" in args or "-o" in args
+    save = "--save" in args or "-s" in args
     result = get_api_result(HOME_NODE)
     ways = tuple(filter(way_filter, result.ways))
     graph = build_graph(ways)
@@ -475,12 +477,16 @@ def main():
     if gallery:
         for i in range(len(walks)):
             walk = walks[i]
-            print(f"Walk {i+1}. Angle/Distance: {walk[1]}")
+            print(f"Walk {i+1}")
             plot_map(graph, walk[0], manual_pause=True)
     if overpass:
         for walk in walks:
             save_map(graph, walk[0])
             print(get_overpass_visualisation_query(walk[0]))
+    if save:
+        for i in range(len(walks)):
+            walk = walks[i]
+            save_map(graph, walk[0], i + 1)
 
 
 if __name__ == "__main__":
