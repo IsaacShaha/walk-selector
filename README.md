@@ -45,7 +45,7 @@ Here's an example `walk.ini`:
 [DEFAULT]
 HomeNode = 25840120
 MaxDistance = 1000
-NumWalks =
+NumWalks = 23
 ```
 
 Then, run `python walk-selector.py` with any of the following options:
