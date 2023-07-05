@@ -444,7 +444,7 @@ def save_map(graph, path, map_number=None):
             rotation=180 - np.rad2deg(get_direction(nodes[i - 1], nodes[i])),
         ).add_to(m)
     map_number_representation = f"-{map_number}" if map_number is not None else ""
-    m.save(f"maps/map{map_number_representation}.html")
+    m.save(f"maps/walk{map_number_representation}.html")
 
 
 def way_filter(way):
