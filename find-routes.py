@@ -18,6 +18,7 @@ from geopy import Point, distance
 # Ways with these tags will not be included for path finding.
 BANNED_WAY_TAGS = (
     ("building",),
+    ("footway",),
     ("highway", "service"),
     ("landuse", "grass"),
     ("leisure", "pitch"),
@@ -253,10 +254,10 @@ def get_plot_background(center_point):
             plot_background = pickle.load(f)
     except FileNotFoundError:
         corner_distance = MAX_DISTANCE / 2**0.5
-        top_left_point = distance.geodesic(meters=corner_distance).destination(
+        top_left_point = distance.geodesic(meters=corner_distance * 2).destination(
             center_point, 315
         )
-        bottom_right_point = distance.geodesic(meters=corner_distance).destination(
+        bottom_right_point = distance.geodesic(meters=corner_distance * 2).destination(
             center_point, 135
         )
         plot_background = smopy.Map(
