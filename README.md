@@ -33,13 +33,13 @@ pip install -r requirements.txt
 
 # Usage
 
-To use `walk selector`, first create a `walk.ini` file that contains the following configurations under the default configuration header:
+To use `walk selector`, first create a `config.ini` file that contains the following configurations under the default configuration header:
 
 - **HomeNode:** The node from which you will depart/return. You can find your node on [OpenStreetMap](https://www.openstreetmap.org/).
 - **MaxDistance:** The maximum distance you are willing to walk in meters. Significantly affects performance.
 - **NumWalks:** The number of walks you would like to generate. Has no effect on performance.
 
-Here's an example `walk.ini`:
+Here's an example `config.ini`:
 
 ```
 [DEFAULT]
