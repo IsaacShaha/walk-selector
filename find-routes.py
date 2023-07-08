@@ -246,7 +246,7 @@ def get_path_length(graph, path):
     return sum([graph[path[i]][path[i + 1]]["weight"] for i in range(len(path) - 1)])
 
 
-def get_plot_background(center_point):
+def get_plot_background(center_point, max_distance):
     # Map for plotting route.
     try:
         with open("plot_background.pkl", "rb") as f:
@@ -283,6 +283,8 @@ def get_walk_constraints():
 def plot_map(
     graph,
     path,
+    home_node,
+    max_distance,
     legal_neighbors=[],
     manual_pause=False,
     disconnected=False,
@@ -292,7 +294,10 @@ def plot_map(
     center_point = Point(
         graph.nodes[home_node]["latitude"], graph.nodes[home_node]["longitude"]
     )
-    plot_background = get_plot_background(center_point)
+    plot_background = get_plot_background(
+        center_point=center_point,
+        max_distance=max_distance,
+    )
     path_pixels = [
         plot_background.to_pixels(
             float(graph.nodes[node]["latitude"]), float(graph.nodes[node]["longitude"])
@@ -367,7 +372,7 @@ def plot_map(
     plt.cla()
 
 
-def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
+def reduce_segment(graph, nodes, home_node, start_node_index=None, end_node_index=None):
     if start_node_index == None:
         # Way is a cycle.
         if nodes[0] == nodes[-1]:
@@ -380,6 +385,7 @@ def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
         reduce_segment(
             graph=graph,
             nodes=nodes,
+            home_node=home_node,
             start_node_index=0,
             end_node_index=1,
         )
@@ -391,6 +397,7 @@ def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
         reduce_segment(
             graph=graph,
             nodes=nodes,
+            home_node=home_node,
             start_node_index=start_node_index,
             end_node_index=end_node_index + 1,
         )
@@ -412,6 +419,7 @@ def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
             reduce_segment(
                 graph=graph,
                 nodes=nodes,
+                home_node=home_node,
                 start_node_index=end_node_index,
                 end_node_index=end_node_index + 1,
             )
@@ -419,9 +427,13 @@ def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
             return
 
 
-def reduce_segments(graph, ways):
+def reduce_segments(graph, ways, home_node):
     for way in ways:
-        reduce_segment(graph, way.nodes)
+        reduce_segment(
+            graph=graph,
+            nodes=way.nodes,
+            home_node=home_node,
+        )
     return graph
 
 
@@ -481,7 +493,11 @@ def main():
     result = get_api_result(home_node)
     ways = tuple(filter(way_filter, result.ways))
     graph = build_graph(ways)
-    reduce_segments(graph, ways)
+    reduce_segments(
+        graph=graph,
+        ways=ways,
+        home_node=home_node,
+    )
     if follow:
         plt.show(block=False)
     walks = get_non_backtracking_walk(
@@ -498,7 +514,13 @@ def main():
         for i in range(len(walks)):
             walk = walks[i]
             print(f"Walk {i+1}")
-            plot_map(graph, walk[0], manual_pause=True)
+            plot_map(
+                graph=graph,
+                path=walk[0],
+                home_node=home_node,
+                max_distance=max_distance,
+                manual_pause=True,
+            )
     if overpass:
         for walk in walks:
             save_map(graph, walk[0])
