@@ -1,5 +1,6 @@
 import configparser
 import hashlib
+import os
 import pickle
 import random
 import subprocess
@@ -29,6 +30,8 @@ BANNED_WAY_TAGS = (
 FILES_TO_HASH = (
     "config.ini",
     "find-routes.py",
+)
+CACHE_FILES = (
     "plot_background.pkl",
     "result.pkl",
     "walks.pkl",
@@ -496,13 +499,24 @@ def save_map(graph, path, map_number=None):
     m.save(f"maps/walk{map_number_representation}.html")
 
 
+def update_files_hash(file_names, hash_function=hashlib.sha256):
+    files_hash = get_files_hash(file_names, hash_function)
+    with open("hash.sha256", "w") as f:
+        f.write(files_hash)
+
+
 def verify_files_hash(file_names, hash_function=hashlib.sha256):
     try:
         with open("hash.sha256", "r") as f:
             previous_hash = f.read()
         files_hash = get_files_hash(file_names, hash_function)
     except FileNotFoundError:
+        update_files_hash(file_names, hash_function)
         return False
+    if previous_hash != files_hash:
+        update_files_hash(file_names, hash_function)
+        return False
+    return True
 
 
 def way_filter(way):
@@ -521,11 +535,18 @@ def way_filter(way):
 
 
 def main():
+    if not verify_files_hash(FILES_TO_HASH):
+        for file in CACHE_FILES:
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                pass
     home_node, max_distance, num_walks = get_walk_constraints()
     args = sys.argv
     follow = "--follow" in args or "-f" in args
     gallery = "--gallery" in args or "-g" in args
     overpass = "--overpass" in args or "-o" in args
+    randomize = "--random" in args or "-r" in args
     save = "--save" in args or "-s" in args
     result = get_api_result(home_node)
     ways = tuple(filter(way_filter, result.ways))
@@ -546,6 +567,8 @@ def main():
     )
     # Take the walks with the num_walks-lowest path angle/distance.
     walks = sorted(walks, key=lambda walk: walk[1])[:num_walks]
+    if randomize:
+        walks = random.sample(walks, len(walks))
     print(f"Found {len(walks)} walks.")
     if gallery:
         for i in range(len(walks)):
