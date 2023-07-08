@@ -550,6 +550,14 @@ def main():
     save = "--save" in args or "-s" in args
     result = get_api_result(home_node)
     ways = tuple(filter(way_filter, result.ways))
+    way_tags = {}
+    for way in ways:
+        for key, value in way.tags.items():
+            way_tags[key] = way_tags.get(key, set()) | {value}
+    for tag in way_tags:
+        print(f"{tag}:")
+        for value in way_tags[tag]:
+            print(f"{tag}={value}")
     graph = build_graph(ways)
     reduce_segments(
         graph=graph,
