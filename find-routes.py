@@ -26,6 +26,13 @@ BANNED_WAY_TAGS = (
     ("leisure", "pitch"),
     ("service", "parking_aisle"),
 )
+FILES_TO_HASH = (
+    "config.ini",
+    "find-routes.py",
+    "plot_background.pkl",
+    "result.pkl",
+    "walks.pkl",
+)
 REQUIRED_WAY_TAGS = (("highway",),)
 
 # Globals
@@ -101,7 +108,14 @@ def get_file_hash(filename, hash_function=hashlib.sha256):
     return file_hash.hexdigest()
 
 
-def get_non_backtracking_walk(
+def get_files_hash(filenames, hash_function=hashlib.sha256):
+    files_hash = hash_function()
+    for filename in filenames:
+        files_hash.update(get_file_hash(filename, hash_function).encode())
+    return files_hash.hexdigest()
+
+
+def get_non_backtracking_walks(
     graph,
     max_distance,
     path,
@@ -115,34 +129,32 @@ def get_non_backtracking_walk(
 ):
     # Just Started
     if len(path) == 0:
+        try:
+            with open("walks.pkl", "rb") as f:
+                walks = pickle.load(f)
+            return walks
+        except FileNotFoundError:
+            pass
 
-        def get_repeatable_edges(start_node):
-            current_node_index = 0
-            repeatable_edge_nodes = [start_node]
-            repeatable_edges = []
-            while current_node_index < len(repeatable_edge_nodes):
-                current_node = repeatable_edge_nodes[current_node_index]
-                current_node_index += 1
-                if len(tuple(graph.neighbors(current_node))) > 2:
-                    continue
-                for neighbor in graph.neighbors(current_node):
-                    if neighbor not in repeatable_edge_nodes:
-                        repeatable_edge_nodes.append(neighbor)
-                        repeatable_edges.append(graph[current_node][neighbor])
-            return repeatable_edges
-
-        return get_non_backtracking_walk(
-            graph=graph,
-            max_distance=max_distance,
-            path=[target],
-            target=target,
-            consumed_edges=consumed_edges,
-            direction=direction,
-            follow=follow,
-            path_angle=path_angle,
-            path_distance=path_angle,
-            repeatable_edges=repeatable_edges + get_repeatable_edges(target),
-        )
+            walks = get_non_backtracking_walks(
+                graph=graph,
+                max_distance=max_distance,
+                path=[target],
+                target=target,
+                consumed_edges=consumed_edges,
+                direction=direction,
+                follow=follow,
+                path_angle=path_angle,
+                path_distance=path_angle,
+                repeatable_edges=repeatable_edges
+                + get_repeatable_edges(
+                    graph=graph,
+                    start_node=target,
+                ),
+            )
+            with open("walks.pkl", "wb") as f:
+                pickle.dump(walks, f)
+        return walks
     else:
         current_node = path[-1]
         # Continuing Path
@@ -187,7 +199,7 @@ def get_non_backtracking_walk(
                     manual_pause=True,
                 )
             paths = [
-                get_non_backtracking_walk(
+                get_non_backtracking_walks(
                     graph=graph,
                     max_distance=max_distance,
                     path=path + [legal_neighbors[i]],
@@ -269,6 +281,22 @@ def get_plot_background(center_point, max_distance):
         with open("plot_background.pkl", "wb") as f:
             pickle.dump(plot_background, f)
     return plot_background
+
+
+def get_repeatable_edges(graph, start_node):
+    current_node_index = 0
+    repeatable_edge_nodes = [start_node]
+    repeatable_edges = []
+    while current_node_index < len(repeatable_edge_nodes):
+        current_node = repeatable_edge_nodes[current_node_index]
+        current_node_index += 1
+        if len(tuple(graph.neighbors(current_node))) > 2:
+            continue
+        for neighbor in graph.neighbors(current_node):
+            if neighbor not in repeatable_edge_nodes:
+                repeatable_edge_nodes.append(neighbor)
+                repeatable_edges.append(graph[current_node][neighbor])
+    return repeatable_edges
 
 
 def get_walk_constraints():
@@ -468,6 +496,15 @@ def save_map(graph, path, map_number=None):
     m.save(f"maps/walk{map_number_representation}.html")
 
 
+def verify_files_hash(file_names, hash_function=hashlib.sha256):
+    try:
+        with open("hash.sha256", "r") as f:
+            previous_hash = f.read()
+        files_hash = get_files_hash(file_names, hash_function)
+    except FileNotFoundError:
+        return False
+
+
 def way_filter(way):
     for tag in BANNED_WAY_TAGS:
         if len(tag) == 1:
@@ -500,7 +537,7 @@ def main():
     )
     if follow:
         plt.show(block=False)
-    walks = get_non_backtracking_walk(
+    walks = get_non_backtracking_walks(
         graph=graph,
         max_distance=max_distance,
         path=[],
