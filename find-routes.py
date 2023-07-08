@@ -1,5 +1,7 @@
 import configparser
+import hashlib
 import pickle
+import random
 import subprocess
 import sys
 from decimal import Decimal
@@ -25,17 +27,6 @@ BANNED_WAY_TAGS = (
     ("service", "parking_aisle"),
 )
 REQUIRED_WAY_TAGS = (("highway",),)
-
-# Start / end node of the walk.
-config = configparser.ConfigParser()
-config.read("walk.ini")
-HOME_NODE = int(config["DEFAULT"]["HomeNode"])
-
-# Maximum distance of a walk in meters.
-MAX_DISTANCE = int(config["DEFAULT"]["MaxDistance"])
-
-# Number of walks to find.
-NUM_WALKS = int(config["DEFAULT"]["NumWalks"])
 
 # Globals
 cache = {}
@@ -100,6 +91,14 @@ def get_distance_between_nodes(node1, node2):
     return distance.distance(
         (node1["latitude"], node1["longitude"]), (node2["latitude"], node2["longitude"])
     ).meters
+
+
+def get_file_hash(filename, hash_function=hashlib.sha256):
+    file_hash = hash_function()
+    with open(filename, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            file_hash.update(chunk)
+    return file_hash.hexdigest()
 
 
 def get_non_backtracking_walk(
@@ -253,11 +252,11 @@ def get_plot_background(center_point):
         with open("plot_background.pkl", "rb") as f:
             plot_background = pickle.load(f)
     except FileNotFoundError:
-        corner_distance = MAX_DISTANCE / 2**0.5
-        top_left_point = distance.geodesic(meters=corner_distance * 2).destination(
+        corner_distance = max_distance / 2**0.5
+        top_left_point = distance.geodesic(meters=corner_distance).destination(
             center_point, 315
         )
-        bottom_right_point = distance.geodesic(meters=corner_distance * 2).destination(
+        bottom_right_point = distance.geodesic(meters=corner_distance).destination(
             center_point, 135
         )
         plot_background = smopy.Map(
@@ -272,6 +271,15 @@ def get_plot_background(center_point):
     return plot_background
 
 
+def get_walk_constraints():
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    home_node = int(config["DEFAULT"]["HomeNode"])
+    max_distance = int(config["DEFAULT"]["MaxDistance"])
+    num_walks = int(config["DEFAULT"]["NumWalks"])
+    return home_node, max_distance, num_walks
+
+
 def plot_map(
     graph,
     path,
@@ -282,7 +290,7 @@ def plot_map(
 ):
     global cache
     center_point = Point(
-        graph.nodes[HOME_NODE]["latitude"], graph.nodes[HOME_NODE]["longitude"]
+        graph.nodes[home_node]["latitude"], graph.nodes[home_node]["longitude"]
     )
     plot_background = get_plot_background(center_point)
     path_pixels = [
@@ -378,7 +386,7 @@ def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
     elif (
         end_node_index < len(nodes) - 1
         and len(tuple(graph.neighbors(nodes[end_node_index].id))) == 2
-        and nodes[end_node_index].id != HOME_NODE
+        and nodes[end_node_index].id != home_node
     ):
         reduce_segment(
             graph=graph,
@@ -389,7 +397,7 @@ def reduce_segment(graph, nodes, start_node_index=None, end_node_index=None):
     elif (
         end_node_index == len(nodes) - 1
         or len(tuple(graph.neighbors(nodes[end_node_index].id))) != 2
-        or nodes[end_node_index].id == HOME_NODE
+        or nodes[end_node_index].id == home_node
     ):
         distance = sum(
             graph[nodes[i].id][nodes[i + 1].id]["weight"]
@@ -464,12 +472,13 @@ def way_filter(way):
 
 
 def main():
+    home_node, max_distance, num_walks = get_walk_constraints()
     args = sys.argv
     follow = "--follow" in args or "-f" in args
     gallery = "--gallery" in args or "-g" in args
     overpass = "--overpass" in args or "-o" in args
     save = "--save" in args or "-s" in args
-    result = get_api_result(HOME_NODE)
+    result = get_api_result(home_node)
     ways = tuple(filter(way_filter, result.ways))
     graph = build_graph(ways)
     reduce_segments(graph, ways)
@@ -477,13 +486,13 @@ def main():
         plt.show(block=False)
     walks = get_non_backtracking_walk(
         graph=graph,
-        max_distance=MAX_DISTANCE,
+        max_distance=max_distance,
         path=[],
-        target=HOME_NODE,
+        target=home_node,
         follow=follow,
     )
-    # Take the walks with the NUM_WALKS-lowest path angle/distance.
-    walks = sorted(walks, key=lambda walk: walk[1])[:NUM_WALKS]
+    # Take the walks with the num_walks-lowest path angle/distance.
+    walks = sorted(walks, key=lambda walk: walk[1])[:num_walks]
     print(f"Found {len(walks)} walks.")
     if gallery:
         for i in range(len(walks)):

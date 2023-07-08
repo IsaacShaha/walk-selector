@@ -2,6 +2,7 @@
 *.ini
 *.pkl
 *.png
+*.sha256
 .direnv/*
 .envrc
 .vscode/*
