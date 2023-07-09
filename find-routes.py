@@ -266,7 +266,8 @@ def get_non_backtracking_walks(
             return [[path, path_angle / path_distance]]
 
 
-def get_overpass_visualisation_query(path):
+def get_overpass_visualisation_query(graph, path):
+    path = get_expanded_path(graph, path)
     query_node = lambda node: f"node({node});"
     query_nodes = lambda nodes: "\n  ".join([query_node(node) for node in nodes])
     overpass_query = f"(\n  {query_nodes(path)}\n);\nout;"
@@ -607,7 +608,9 @@ def main():
     if overpass:
         for walk in walks:
             save_map(graph, walk[0])
-            print(get_overpass_visualisation_query(walk[0]))
+            print(
+                get_overpass_visualisation_query(graph=graph, path=walk[0]),
+            )
     if save:
         for i in range(len(walks)):
             walk = walks[i]
