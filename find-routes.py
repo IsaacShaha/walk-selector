@@ -110,7 +110,6 @@ def get_expanded_path(graph, nodes):
         next_node = nodes[i + 1]
         if "inner_path" in graph[current_node][next_node]:
             inner_path = graph[current_node][next_node]["inner_path"]
-            print(f"inner_path of {current_node}: {inner_path}")
             reverse = inner_path[0] == next_node
             expanded_path += (list(reversed(inner_path)) if reverse else inner_path)[1:]
         else:
@@ -498,6 +497,7 @@ def reference_in(object, iterable):
 
 
 def save_map(graph, path, map_number=None):
+    path = get_expanded_path(graph, path)
     tuple_nodes = [
         (graph.nodes[node]["latitude"], graph.nodes[node]["longitude"]) for node in path
     ]
@@ -510,13 +510,14 @@ def save_map(graph, path, map_number=None):
     folium.PolyLine(locations=tuple_nodes).add_to(m)
     # Draw arrows.
     for i in range(1, len(tuple_nodes)):
-        folium.RegularPolygonMarker(
-            location=tuple_nodes[i],
-            fill_color="#000000",
-            number_of_sides=3,
-            radius=10,
-            rotation=180 - np.rad2deg(get_direction(nodes[i - 1], nodes[i])),
-        ).add_to(m)
+        if len(tuple(graph.neighbors(path[i]))) > 2:
+            folium.RegularPolygonMarker(
+                location=tuple_nodes[i],
+                fill_color="#000000",
+                number_of_sides=3,
+                radius=10,
+                rotation=180 - np.rad2deg(get_direction(nodes[i - 1], nodes[i])),
+            ).add_to(m)
     map_number_representation = f"-{map_number}" if map_number is not None else ""
     m.save(f"maps/walk{map_number_representation}.html")
 
