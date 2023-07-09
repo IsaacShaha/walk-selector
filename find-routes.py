@@ -103,6 +103,21 @@ def get_distance_between_nodes(node1, node2):
     ).meters
 
 
+def get_expanded_path(graph, nodes):
+    expanded_path = [nodes[0]]
+    for i in range(len(nodes) - 1):
+        current_node = nodes[i]
+        next_node = nodes[i + 1]
+        if "inner_path" in graph[current_node][next_node]:
+            inner_path = graph[current_node][next_node]["inner_path"]
+            print(f"inner_path of {current_node}: {inner_path}")
+            reverse = inner_path[0] == next_node
+            expanded_path += (list(reversed(inner_path)) if reverse else inner_path)[1:]
+        else:
+            expanded_path.append(next_node)
+    return expanded_path
+
+
 def get_file_hash(filename, hash_function=hashlib.sha256):
     file_hash = hash_function()
     with open(filename, "rb") as f:
@@ -198,6 +213,8 @@ def get_non_backtracking_walks(
                 plot_map(
                     graph=graph,
                     path=path,
+                    home_node=target,
+                    max_distance=max_distance,
                     legal_neighbors=legal_neighbors,
                     manual_pause=True,
                 )
@@ -329,6 +346,7 @@ def plot_map(
         center_point=center_point,
         max_distance=max_distance,
     )
+    path = get_expanded_path(graph, path)
     path_pixels = [
         plot_background.to_pixels(
             float(graph.nodes[node]["latitude"]), float(graph.nodes[node]["longitude"])
@@ -443,7 +461,7 @@ def reduce_segment(graph, nodes, home_node, start_node_index=None, end_node_inde
         )
         for i in range(start_node_index, end_node_index):
             graph.remove_edge(nodes[i].id, nodes[i + 1].id)
-        inner_path = nodes[start_node_index : end_node_index + 1]
+        inner_path = [node.id for node in nodes[start_node_index : end_node_index + 1]]
         graph.add_edge(
             nodes[start_node_index].id,
             nodes[end_node_index].id,
@@ -486,7 +504,7 @@ def save_map(graph, path, map_number=None):
     nodes = [graph.nodes[node] for node in path]
     m = folium.Map(
         location=tuple_nodes[0],
-        zoom_start=15,
+        zoom_start=14,
     )
     folium.Marker(location=tuple_nodes[0], popup="Home").add_to(m)
     folium.PolyLine(locations=tuple_nodes).add_to(m)
