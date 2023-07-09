@@ -441,10 +441,14 @@ def reduce_segment(graph, nodes, home_node, start_node_index=None, end_node_inde
             graph[nodes[i].id][nodes[i + 1].id]["weight"]
             for i in range(start_node_index, end_node_index)
         )
+        inner_path = nodes[start_node_index : end_node_index + 1]
         for node in nodes[start_node_index + 1 : end_node_index]:
             graph.remove_node(node.id)
         graph.add_edge(
-            nodes[start_node_index].id, nodes[end_node_index].id, weight=distance
+            nodes[start_node_index].id,
+            nodes[end_node_index].id,
+            inner_path=inner_path,
+            weight=distance,
         )
         if end_node_index < len(nodes) - 1:
             reduce_segment(
