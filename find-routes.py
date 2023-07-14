@@ -146,31 +146,32 @@ def get_non_backtracking_walks(
 ):
     # Just Started
     if len(path) == 0:
-        try:
-            with open("walks.pkl", "rb") as f:
-                walks = pickle.load(f)
-            return walks
-        except FileNotFoundError:
-            pass
+        if not follow:
+            try:
+                with open("walks.pkl", "rb") as f:
+                    walks = pickle.load(f)
+                return walks
+            except FileNotFoundError:
+                pass
 
-            walks = get_non_backtracking_walks(
+        walks = get_non_backtracking_walks(
+            graph=graph,
+            max_distance=max_distance,
+            path=[target],
+            target=target,
+            consumed_edges=consumed_edges,
+            direction=direction,
+            follow=follow,
+            path_angle=path_angle,
+            path_distance=path_angle,
+            repeatable_edges=repeatable_edges
+            + get_repeatable_edges(
                 graph=graph,
-                max_distance=max_distance,
-                path=[target],
-                target=target,
-                consumed_edges=consumed_edges,
-                direction=direction,
-                follow=follow,
-                path_angle=path_angle,
-                path_distance=path_angle,
-                repeatable_edges=repeatable_edges
-                + get_repeatable_edges(
-                    graph=graph,
-                    start_node=target,
-                ),
-            )
-            with open("walks.pkl", "wb") as f:
-                pickle.dump(walks, f)
+                start_node=target,
+            ),
+        )
+        with open("walks.pkl", "wb") as f:
+            pickle.dump(walks, f)
         return walks
     else:
         current_node = path[-1]
