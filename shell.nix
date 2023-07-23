@@ -1,5 +1,7 @@
 let
   pkgs = import <nixpkgs> { };
+
+  # Python setup.
   smopy = pkgs.python311Packages.buildPythonPackage rec {
     pname = "smopy";
     version = "latest";
@@ -16,17 +18,19 @@ let
       pillow
     ];
   };
-  python-packages = ps: with ps; [
+  python = pkgs.python311.withPackages (ps: with ps; [
     folium
     geopy
     matplotlib
     networkx
     overpy
     smopy
-  ];
+  ]);
 in
 pkgs.mkShell {
-  buildInputs = [
-    (pkgs.python311.withPackages python-packages)
+  buildInputs = with pkgs; [
+    haskell-language-server
+    python
+    stack
   ];
 }
