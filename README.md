@@ -62,8 +62,8 @@ Then, run `python walk-selector.py` with any of the following options:
 
 # To-Do
 
+1. Remove mini detours (e.g. deviate from a path for for 10 meters only to immediately return to it)
 1. Take the back side off folium arrows.
-1. Add reduced nodes to path visualisations in both folium and smopy maps.
 1. Allow adding a minimum distance for walks.
 1. List all exceptions to formally define a `walk` in this case in the [terminology](#terminology) section.
 1. Remake this whole thing in Haskell (because I <3 functional programming).
